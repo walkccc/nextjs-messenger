@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String            @id @default(cuid())
+  name          String?
+  email         String?           @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime          @default(now())
+  accounts      Account[]
+  conversations Conversation[]
+  sentMessages  Message[]
+  seenMessages  MessagesOnUsers[]
+}
+
+model Account {
+  id                Int     @id @default(autoincrement())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  name          String?
+  isGroup       Boolean?
+  createdAt     DateTime  @default(now())
+  lastMessageAt DateTime  @default(now())
+  messages      Message[]
+  users         User[]
+}
+
+model Message {
+  id             Int               @id @default(autoincrement())
+  body           String?
+  image          String?
+  createdAt      DateTime          @default(now())
+  sender         User              @relation(fields: [senderId], references: [id])
+  senderId       String
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  seenUsers      MessagesOnUsers[]
+}
+
+model MessagesOnUsers {
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId Int
+
+  @@id([userId, messageId])
+}
