@@ -1,12 +1,18 @@
 'use client';
 
+import { User } from 'next-auth';
 import { useState } from 'react';
 
+import { Avatar } from '@/components/global/avatar';
 import { useRoutes } from '@/hooks/use-routes';
 
 import { SidebarItem } from './sidebar-item';
 
-export const Sidebar = () => {
+interface SidebarProps {
+  currentUser: User;
+}
+
+export const Sidebar = ({ currentUser }: SidebarProps) => {
   const routes = useRoutes();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -25,6 +31,14 @@ export const Sidebar = () => {
             />
           ))}
         </ul>
+      </nav>
+      <nav className="mx-4 flex flex-col items-center justify-between">
+        <div
+          onClick={() => setIsOpen(true)}
+          className="cursor-pointer transition hover:opacity-75"
+        >
+          <Avatar user={currentUser} />
+        </div>
       </nav>
     </div>
   );
