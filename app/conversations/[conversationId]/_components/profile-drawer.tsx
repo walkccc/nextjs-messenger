@@ -3,12 +3,14 @@
 import { Dialog, Transition } from '@headlessui/react';
 import { Conversation, User } from '@prisma/client';
 import { format } from 'date-fns';
-import { Fragment, useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { IoClose, IoTrash } from 'react-icons/io5';
 
 import { Avatar } from '@/components/global/avatar';
 import { AvatarGroup } from '@/components/global/avatar-group';
 import { useOtherUser } from '@/hooks/use-other-user';
+
+import { ConfirmModal } from './confirm-modal';
 
 interface ProfileDrawerProps {
   conversation: Conversation & {
@@ -24,6 +26,7 @@ export const ProfileDrawer = ({
   onClose,
 }: ProfileDrawerProps) => {
   const otherUser = useOtherUser(conversation);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const joinedDate = useMemo(() => {
     return format(new Date(otherUser.createdAt), 'PP');
   }, [otherUser.createdAt]);
@@ -39,6 +42,10 @@ export const ProfileDrawer = ({
 
   return (
     <>
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+      />
       <Transition.Root show={isOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={onClose}>
           <Transition.Child
@@ -99,7 +106,10 @@ export const ProfileDrawer = ({
                               onClick={() => {}}
                               className="flex cursor-pointer flex-col items-center gap-3 hover:opacity-75"
                             >
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                              <div
+                                onClick={() => setConfirmOpen(true)}
+                                className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100"
+                              >
                                 <IoTrash size={20} />
                               </div>
                               <div className="text-sm font-light text-neutral-600">
