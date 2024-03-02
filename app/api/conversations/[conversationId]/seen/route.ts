@@ -1,5 +1,8 @@
+import { find } from 'lodash';
+
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { pusherServer } from '@/lib/pusher';
 
 interface IParams {
   conversationId?: string;
@@ -64,6 +67,18 @@ export async function POST(request: Request, { params }: { params: IParams }) {
         },
       },
     });
+
+    await pusherServer.trigger(currentUser.email, 'conversation:update', {
+      id: conversationId,
+      messages: [updatedMessage],
+    });
+
+    await pusherServer.trigger(
+      conversationId!,
+      'message:update',
+      updatedMessage,
+    );
+
     return Response.json(updatedMessage);
   } catch (error: unknown) {
     console.log('[error] POST /api/conversations/:conversationId/seen', error);

@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { pusherServer } from '@/lib/pusher';
 
 interface IParams {
   conversationId?: string;
@@ -30,6 +31,16 @@ export async function DELETE(
         id: conversationId,
         users: { some: { id: currentUser.id } },
       },
+    });
+
+    existingConversation.users.forEach((user) => {
+      if (user.email) {
+        pusherServer.trigger(
+          user.email,
+          'conversation:delete',
+          existingConversation,
+        );
+      }
     });
 
     return Response.json(deletedConversation);

@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { pusherServer } from '@/lib/pusher';
 
 interface Body {
   conversationId: string;
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
       },
     });
 
-    await db.conversation.update({
+    const updatedConversation = await db.conversation.update({
       where: { id: conversationId },
       data: {
         lastMessageAt: new Date(),
@@ -65,6 +66,17 @@ export async function POST(request: Request) {
           },
         },
       },
+    });
+
+    await pusherServer.trigger(conversationId, 'message:create', newMessage);
+    const lastMessage =
+      updatedConversation.messages[updatedConversation.messages.length - 1];
+    updatedConversation.users.map((user) => {
+      console.log(`Triggering conversation:update for ${user}`);
+      pusherServer.trigger(user.email!, 'conversation:update', {
+        id: conversationId,
+        message: [lastMessage],
+      });
     });
 
     return Response.json(newMessage);

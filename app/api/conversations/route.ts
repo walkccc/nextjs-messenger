@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { pusherServer } from '@/lib/pusher';
 
 interface Body {
   friendId: string;
@@ -68,6 +69,17 @@ export async function POST(request: Request) {
         users: true,
       },
     });
+
+    newConversation.users.forEach((user) => {
+      if (user.email) {
+        pusherServer.trigger(
+          user.email,
+          'conversation:create',
+          newConversation,
+        );
+      }
+    });
+
     return Response.json(newConversation);
   } catch (error: unknown) {
     console.log(`[error] POST /api/conversations - ${error}`);

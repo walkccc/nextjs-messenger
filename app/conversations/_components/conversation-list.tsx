@@ -2,11 +2,14 @@
 
 import { User } from '@prisma/client';
 import clsx from 'clsx';
+import { find } from 'lodash';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useEffect, useMemo, useState } from 'react';
 import { MdOutlineGroupAdd } from 'react-icons/md';
 
 import { useConversation } from '@/hooks/use-conversation';
+import { pusherClient } from '@/lib/pusher';
 import { FullConversationType } from '@/types';
 
 import { ConversationBox } from './conversation-box';
@@ -21,10 +24,66 @@ export const ConversationList = ({
   users,
   initialConversations,
 }: ConversationListProps) => {
-  const [conversations, _] = useState(initialConversations);
+  const [conversations, setConversations] = useState(initialConversations);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { conversationId, isOpen } = useConversation();
   const router = useRouter();
+  const session = useSession();
+  const pusherKey = useMemo(() => {
+    return session.data?.user?.email;
+  }, [session.data?.user?.email]);
+
+  useEffect(() => {
+    if (!pusherKey) {
+      return;
+    }
+
+    pusherClient.subscribe(pusherKey);
+
+    const createConversationHandler = (conversation: FullConversationType) => {
+      setConversations((current) => {
+        if (find(current, { id: conversation.id })) {
+          return current;
+        }
+        return [conversation, ...current];
+      });
+    };
+
+    const updateConversationHandler = (conversation: FullConversationType) => {
+      setConversations((current) =>
+        current.map((currentConversation) => {
+          if (currentConversation.id === conversation.id) {
+            return {
+              ...currentConversation,
+              messages: conversation.messages,
+            };
+          }
+          return currentConversation;
+        }),
+      );
+    };
+
+    const deleteConversationHandler = (conversation: FullConversationType) => {
+      setConversations((current) => {
+        return [...current.filter((c) => c.id !== conversation.id)];
+      });
+
+      if (conversationId === conversation.id) {
+        router.push('/conversations');
+      }
+    };
+
+    pusherClient.bind('conversation:create', createConversationHandler);
+    pusherClient.bind('conversation:update', updateConversationHandler);
+    pusherClient.bind('conversation:delete', deleteConversationHandler);
+
+    return () => {
+      pusherClient.unsubscribe(pusherKey);
+      pusherClient.unbind('conversation:create', createConversationHandler);
+      pusherClient.unbind('conversation:update', updateConversationHandler);
+      pusherClient.unbind('conversation:delete', deleteConversationHandler);
+    };
+  }, [pusherKey, conversationId, router]);
 
   return (
     <>

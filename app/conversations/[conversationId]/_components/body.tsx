@@ -1,9 +1,11 @@
 'use client';
 
 import axios from 'axios';
+import { find, update } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 
 import { useConversation } from '@/hooks/use-conversation';
+import { pusherClient } from '@/lib/pusher';
 import { FullMessageType } from '@/types';
 
 import { MessageBox } from './message-box';
@@ -20,6 +22,43 @@ export const Body = ({ initialMessages }: BodyProps) => {
 
   useEffect(() => {
     axios.post(`/api/conversations/${conversationId}/seen`);
+  }, [conversationId]);
+
+  useEffect(() => {
+    pusherClient.subscribe(conversationId);
+
+    const createMessageHandler = (message: FullMessageType) => {
+      axios.post(`/api/conversations/${conversationId}/seen`);
+
+      setMessages((current) => {
+        if (find(current, { id: message.id })) {
+          return current;
+        }
+        return [...current, message];
+      });
+
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const updateMessageHandler = (newMessage: FullMessageType) => {
+      setMessages((current) =>
+        current.map((currentMessage) => {
+          if (currentMessage.id === newMessage.id) {
+            return newMessage;
+          }
+          return currentMessage;
+        }),
+      );
+    };
+
+    pusherClient.bind('message:create', createMessageHandler);
+    pusherClient.bind('message:update', updateMessageHandler);
+
+    return () => {
+      pusherClient.unsubscribe(conversationId);
+      pusherClient.unbind('message:create', createMessageHandler);
+      pusherClient.unbind('message:update', updateMessageHandler);
+    };
   }, [conversationId]);
 
   return (
