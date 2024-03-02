@@ -4,9 +4,12 @@ import clsx from 'clsx';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 
 import { Avatar } from '@/components/global/avatar';
 import { FullMessageType } from '@/types';
+
+import { ImageModal } from './image-modal';
 
 interface MessageBoxProps {
   message: FullMessageType;
@@ -15,6 +18,7 @@ interface MessageBoxProps {
 
 export const MessageBox = ({ message, isLast }: MessageBoxProps) => {
   const session = useSession();
+  const [imageModalOpen, setImageModalOpen] = useState(false);
   const isOwn = session.data?.user?.email === message.sender.email;
   const seenUsers = (message.seenUsers || [])
     .filter(({ user }) => user?.email !== message.sender.email)
@@ -43,12 +47,18 @@ export const MessageBox = ({ message, isLast }: MessageBoxProps) => {
           </div>
         </div>
         <div className={messageStyle}>
+          <ImageModal
+            src={message.image}
+            isOpen={imageModalOpen}
+            onClose={() => setImageModalOpen(false)}
+          />
           {message.image ? (
             <Image
               alt="Image"
               height="288"
               width="288"
               src={message.image}
+              onClick={() => setImageModalOpen(true)}
               className="translate cursor-pointer object-cover transition hover:scale-110"
             />
           ) : (
