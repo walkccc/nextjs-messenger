@@ -60,7 +60,7 @@ export const ConfirmModal = ({ isOpen, onClose }: ConfirmModalProps) => {
           </div>
         </div>
       </div>
-      <div className="mt-5 gap-x-2 sm:mt-4 sm:flex sm:flex-row-reverse">
+      <div className="mt-5 flex gap-x-2">
         <Button
           disabled={isLoading}
           onClick={onDelete}
